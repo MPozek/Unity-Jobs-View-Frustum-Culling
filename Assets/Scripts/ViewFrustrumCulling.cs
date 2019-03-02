@@ -38,7 +38,6 @@ public static class ViewFrustrumCulling
     {
         [ReadOnly, DeallocateOnJobCompletion] public NativeArray<float4> FrustrumPlanes;
         [ReadOnly] public NativeArray<float3> Positions;
-        [ReadOnly] public float3 Extents;
 
         public bool Execute(int i)
         {
@@ -60,12 +59,18 @@ public static class ViewFrustrumCulling
     private static NativeArray<float4> _frustrumPlanes;
 
 #if UNITY_EDITOR
+    private static bool _exitingPlayMode = false;
     private static void DisposeOnQuit(UnityEditor.PlayModeStateChange state)
     {
         if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode)
         {
+            _exitingPlayMode = true;
             _frustrumPlanes.Dispose();
             UnityEditor.EditorApplication.playModeStateChanged -= DisposeOnQuit;
+        }
+        else if (state == UnityEditor.PlayModeStateChange.ExitingEditMode)
+        {
+            _exitingPlayMode = false;
         }
     }
 #endif
@@ -74,10 +79,17 @@ public static class ViewFrustrumCulling
     {
         if (_frustrumPlanes.IsCreated == false)
         {
-            _frustrumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
 #if UNITY_EDITOR
+            if (_exitingPlayMode)
+            {
+                Debug.LogWarning("Trying to set frustrum planes while exiting play mode?");
+                return; // TODO :: warn?
+            }
+
             UnityEditor.EditorApplication.playModeStateChanged += DisposeOnQuit;
 #endif
+
+            _frustrumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
         }
 
         GeometryUtility.CalculateFrustumPlanes(worldProjectionMatrix, _planes);
@@ -98,6 +110,9 @@ public static class ViewFrustrumCulling
     public static JobHandle ScheduleCullingJob(NativeArray<float3> positions,
         NativeArray<float3> extents, NativeList<int> outIndices)
     {
+        if (!_frustrumPlanes.IsCreated)
+            return default(JobHandle);
+
         return new FilterViewFrustrumCulling
         {
             FrustrumPlanes = new NativeArray<float4>(_frustrumPlanes, Allocator.TempJob),
@@ -116,6 +131,9 @@ public static class ViewFrustrumCulling
     public static JobHandle ScheduleCullingJob(NativeArray<float3> positions,
         float3 extents, NativeList<int> outIndices)
     {
+        if (!_frustrumPlanes.IsCreated)
+            return default(JobHandle);
+
         // embed the extents into plane constants
         var frustrumPlanes = new NativeArray<float4>(_frustrumPlanes, Allocator.TempJob);
 
