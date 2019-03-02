@@ -13,7 +13,7 @@ public class VFCullingSample : MonoBehaviour
     public Camera TargetCamera;
 
     private NativeArray<float3> _positions;
-    private NativeArray<float3> _extents;
+    private readonly float3 _extents = new float3(0.5f, 0.5f, 0.5f);
 
     private NativeList<int> _filteredIndices;
     
@@ -21,7 +21,6 @@ public class VFCullingSample : MonoBehaviour
     private void Start()
     {
         _positions = new NativeArray<float3>(NumObjects, Allocator.Persistent);
-        _extents = new NativeArray<float3>(NumObjects, Allocator.Persistent);
 
         _filteredIndices = new NativeList<int>(NumObjects, Allocator.Persistent);
 
@@ -30,14 +29,12 @@ public class VFCullingSample : MonoBehaviour
         for (int i = 0; i < NumObjects; i++)
         {
             _positions[i] = rand.NextFloat3Direction() * rand.NextFloat(1f, 50f);
-            _extents[i] = new float3(0.5f, 0.5f, 0.5f);
         }
     }
 
     private void OnDestroy()
     {
         _positions.Dispose();
-        _extents.Dispose();
         _filteredIndices.Dispose();
     }
 

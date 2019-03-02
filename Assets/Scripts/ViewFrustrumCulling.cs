@@ -20,11 +20,11 @@ public static class ViewFrustrumCulling
             for (int j = 0; j < 6; j++)
             {
                 float3 planeNormal = FrustrumPlanes[j].xyz;
-                
+
                 float planeConstant = FrustrumPlanes[j].w;
 
-                if (math.dot(Extents[i], math.abs(planeNormal)) + 
-                    math.dot(planeNormal, Positions[i]) + 
+                if (math.dot(Extents[i], math.abs(planeNormal)) +
+                    math.dot(planeNormal, Positions[i]) +
                     planeConstant <= 0f)
                     return false;
             }
@@ -48,8 +48,7 @@ public static class ViewFrustrumCulling
 
                 float planeConstant = FrustrumPlanes[j].w;
 
-                if (math.dot(Extents, math.abs(planeNormal)) +
-                    math.dot(planeNormal, Positions[i]) +
+                if (math.dot(planeNormal, Positions[i]) +
                     planeConstant <= 0f)
                     return false;
             }
@@ -58,41 +57,78 @@ public static class ViewFrustrumCulling
         }
     }
 
-    public static JobHandle ScheduleCullingJob(float4x4 worldProjectionMatrix, NativeArray<float3> positions, NativeArray<float3> extents, NativeList<int> outIndices)
+    private static NativeArray<float4> _frustrumPlanes;
+
+#if UNITY_EDITOR
+    private static void DisposeOnQuit(UnityEditor.PlayModeStateChange state)
     {
-        NativeArray<float4> frustrumPlanes = new NativeArray<float4>(6, Allocator.TempJob);
-        
+        if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+        {
+            _frustrumPlanes.Dispose();
+            UnityEditor.EditorApplication.playModeStateChanged -= DisposeOnQuit;
+        }
+    }
+#endif
+
+    public static void SetFrustrumPlanes(float4x4 worldProjectionMatrix)
+    {
+        if (_frustrumPlanes.IsCreated == false)
+        {
+            _frustrumPlanes = new NativeArray<float4>(6, Allocator.Persistent);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged += DisposeOnQuit;
+#endif
+        }
+
         GeometryUtility.CalculateFrustumPlanes(worldProjectionMatrix, _planes);
 
         for (int i = 0; i < 6; ++i)
         {
-            frustrumPlanes[i] = new float4(_planes[i].normal, _planes[i].distance);
+            _frustrumPlanes[i] = new float4(_planes[i].normal, _planes[i].distance);
         }
+    }
 
+    public static JobHandle ScheduleCullingJob(float4x4 worldProjectionMatrix, NativeArray<float3> positions,
+        NativeArray<float3> extents, NativeList<int> outIndices)
+    {
+        SetFrustrumPlanes(worldProjectionMatrix);
+        return ScheduleCullingJob(positions, extents, outIndices);
+    }
+
+    public static JobHandle ScheduleCullingJob(NativeArray<float3> positions,
+        NativeArray<float3> extents, NativeList<int> outIndices)
+    {
         return new FilterViewFrustrumCulling
         {
-            FrustrumPlanes = frustrumPlanes,
+            FrustrumPlanes = new NativeArray<float4>(_frustrumPlanes, Allocator.TempJob),
             Positions = positions,
             Extents = extents
         }.ScheduleAppend(outIndices, positions.Length, 16);
     }
 
-    public static JobHandle ScheduleCullingJob(float4x4 worldProjectionMatrix, NativeArray<float3> positions, float3 extents, NativeList<int> outIndices)
+    public static JobHandle ScheduleCullingJob(float4x4 worldProjectionMatrix, NativeArray<float3> positions,
+        float3 extents, NativeList<int> outIndices)
     {
-        NativeArray<float4> frustrumPlanes = new NativeArray<float4>(6, Allocator.TempJob);
+        SetFrustrumPlanes(worldProjectionMatrix);
+        return ScheduleCullingJob(positions, extents, outIndices);
+    }
 
-        GeometryUtility.CalculateFrustumPlanes(worldProjectionMatrix, _planes);
+    public static JobHandle ScheduleCullingJob(NativeArray<float3> positions,
+        float3 extents, NativeList<int> outIndices)
+    {
+        // embed the extents into plane constants
+        var frustrumPlanes = new NativeArray<float4>(_frustrumPlanes, Allocator.TempJob);
 
-        for (int i = 0; i < 6; ++i)
+        for (int i = 0; i < 6; i++)
         {
-            frustrumPlanes[i] = new float4(_planes[i].normal, _planes[i].distance);
+            frustrumPlanes[i] = new float4(frustrumPlanes[i].xyz,
+                math.dot(extents, math.abs(frustrumPlanes[i].xyz)) + frustrumPlanes[i].w);
         }
 
         return new FilterViewFrustrumSingleSizeCulling
         {
             FrustrumPlanes = frustrumPlanes,
-            Positions = positions,
-            Extents = extents
+            Positions = positions
         }.ScheduleAppend(outIndices, positions.Length, 16);
     }
 }
