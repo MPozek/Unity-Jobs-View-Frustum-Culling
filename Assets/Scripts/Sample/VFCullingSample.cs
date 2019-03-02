@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -12,11 +13,16 @@ public class VFCullingSample : MonoBehaviour
 
     public Camera TargetCamera;
 
+    public Material Material;
+    public Mesh Mesh;
+
     private NativeArray<float3> _positions;
-    private readonly float3 _extents = new float3(0.5f, 0.5f, 0.5f);
+    private readonly float3 _extents = new float3(0.25f, 0.25f, 0.25f);
 
     private NativeList<int> _filteredIndices;
-    
+
+    private IndirectRenderer _renderer;
+
     // Start is called before the first frame update
     private void Start()
     {
@@ -30,43 +36,48 @@ public class VFCullingSample : MonoBehaviour
         {
             _positions[i] = rand.NextFloat3Direction() * rand.NextFloat(1f, 50f);
         }
+
+        _renderer = new IndirectRenderer(NumObjects, Material, Mesh);
     }
 
     private void OnDestroy()
     {
         _positions.Dispose();
         _filteredIndices.Dispose();
+
+        _renderer.ReleaseBuffers(true);
     }
+
+    private JobHandle _cullJobHandle;
 
     // Update is called once per frame
     private void Update()
     {
-        _filteredIndices.Clear();
+        if (DrawOnlyCulled)
+        {
+            _filteredIndices.Clear();
 
-        ViewFrustrumCulling.ScheduleCullingJob(TargetCamera.cullingMatrix, _positions, _extents, _filteredIndices).Complete();
-
-        
+            _cullJobHandle = ViewFrustrumCulling.ScheduleCullingJob(TargetCamera.cullingMatrix, _positions, _extents, _filteredIndices);
+        }
     }
 
-    private void OnDrawGizmos()
+    private void LateUpdate()
     {
-        if (Application.isPlaying)
+        // actually draw the meshes
+        if (DrawOnlyCulled)
         {
-            if (DrawOnlyCulled)
+            _cullJobHandle.Complete();
+
+            using (var filteredPositions = new NativeArray<float3>(_filteredIndices.Length, Allocator.TempJob))
             {
-                for (int i = 0; i < _filteredIndices.Length; i++)
-                {
-                    int idx = _filteredIndices[i];
-                    Gizmos.DrawWireSphere(_positions[idx], 1f);
-                }
+                UtilityJobs.ScheduleParallelCopyIndices(_positions, _filteredIndices, filteredPositions).Complete();
+
+                _renderer.Draw(0, filteredPositions.Length, filteredPositions);
             }
-            else
-            {
-                for (int i = 0; i < NumObjects; i++)
-                {
-                    Gizmos.DrawWireSphere(_positions[i], 1f);
-                }
-            }
+        }
+        else
+        {
+            _renderer.Draw(0, _positions.Length, _positions);
         }
     }
 }
