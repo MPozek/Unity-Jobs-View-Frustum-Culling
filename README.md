@@ -1,5 +1,7 @@
 # Unity-Jobs-View-Frustrum-Culling
 
+Unity version - 2018.3.6f1
+
 ## Used packages
 
 - com.unity.burst - v0.2.4
