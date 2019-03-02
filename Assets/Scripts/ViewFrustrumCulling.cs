@@ -4,8 +4,10 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-public static class VFCulling
+public static class ViewFrustrumCulling
 {
+    private static readonly Plane[] _planes = new Plane[6];
+
     [BurstCompile]
     private struct FilterViewFrustrumCulling : IJobParallelForFilter
     {
@@ -31,8 +33,6 @@ public static class VFCulling
             return true;
         }
     }
-
-    private static readonly Plane[] _planes = new Plane[6];
 
     public static JobHandle ScheduleCullingJob(float4x4 worldProjectionMatrix, NativeArray<float3> positions, NativeArray<float3> extents, NativeList<int> outIndices)
     {
