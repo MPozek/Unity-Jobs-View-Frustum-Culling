@@ -57,7 +57,7 @@ public class VFCullingSample : MonoBehaviour
         {
             _filteredIndices.Clear();
 
-            _cullJobHandle = ViewFrustrumCulling.ScheduleCullingJob(TargetCamera.cullingMatrix, _positions, _extents, _filteredIndices);
+            _cullJobHandle = ViewFrustumCulling.ScheduleCullingJob(TargetCamera.cullingMatrix, _positions, _extents, _filteredIndices);
         }
     }
 
