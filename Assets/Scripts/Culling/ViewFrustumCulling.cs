@@ -111,7 +111,10 @@ public static class ViewFrustumCulling
         NativeArray<float3> extents, NativeList<int> outIndices)
     {
         if (!_frustumPlanes.IsCreated)
+        {
+            Debug.LogWarning("Trying to schedule a culling job before any frustum planes were set. Either call the ScheduleCullingJob with the WP matrix or call SetFrustumPlanes before.");
             return default(JobHandle);
+        }
 
         return new FilterViewFrustumCulling
         {
@@ -132,7 +135,10 @@ public static class ViewFrustumCulling
         float3 extents, NativeList<int> outIndices)
     {
         if (!_frustumPlanes.IsCreated)
+        {
+            Debug.LogWarning("Trying to schedule a culling job before any frustum planes were set. Either call the ScheduleCullingJob with the WP matrix or call SetFrustumPlanes before.");
             return default(JobHandle);
+        }
 
         // embed the extents into plane constants
         var frustumPlanes = new NativeArray<float4>(_frustumPlanes, Allocator.TempJob);
