@@ -179,7 +179,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
 --- !u!1 &202958057
 GameObject:
@@ -210,7 +210,7 @@ Transform:
   m_Children:
   - {fileID: 534669905}
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
 --- !u!1 &534669902
 GameObject:
@@ -305,6 +305,7 @@ GameObject:
   - component: {fileID: 1502866949}
   - component: {fileID: 1502866948}
   - component: {fileID: 1502866947}
+  - component: {fileID: 1502866946}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -312,6 +313,21 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1502866946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1502866945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b0ad3e0514ddc04185c7e05cc982383, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NumObjects: 1000
+  DrawOnlyCulled: 1
+  TargetCamera: {fileID: 534669904}
 --- !u!23 &1502866947
 MeshRenderer:
   m_ObjectHideFlags: 0
