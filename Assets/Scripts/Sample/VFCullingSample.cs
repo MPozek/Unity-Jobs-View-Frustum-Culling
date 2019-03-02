@@ -70,7 +70,10 @@ public class VFCullingSample : MonoBehaviour
 
             using (var filteredPositions = new NativeArray<float3>(_filteredIndices.Length, Allocator.TempJob))
             {
-                UtilityJobs.ScheduleParallelCopyIndices(_positions, _filteredIndices, filteredPositions).Complete();
+                var copyJob = UtilityJobs.ScheduleParallelCopyIndices(_positions, _filteredIndices, filteredPositions);
+                
+                copyJob.Complete();
+                _filteredIndices.Clear();
 
                 _renderer.Draw(0, filteredPositions.Length, filteredPositions);
             }
